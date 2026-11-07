@@ -104,7 +104,7 @@ export default function Planner() {
           <Icon name={panel ? 'chevron-down' : 'chevron-up'} size={16} />
         </button>
         {panel && <div className="planner-body stack">
-          <form className="row tight" onSubmit={search}>
+          <form className="planner-search" onSubmit={search}>
             <input value={q} onChange={e => { setQ(e.target.value); if (!e.target.value) setFound(null) }} placeholder={online ? 'Go to a mountain, a village, a car park…' : 'Place search is switched off'} aria-label="Find a place" disabled={!online} />
             <button type="submit" className="btn icon-only" aria-label="Find" disabled={!online || !q.trim()}><Icon name="search" size={15} /></button>
           </form>
@@ -112,12 +112,12 @@ export default function Planner() {
             <button key={i} type="button" className="pick-row" onClick={() => { setView({ lat: p.lat, lng: p.lng, zoom: 14, key: `${p.lat},${p.lng},${Date.now()}` }); setFound(null) }}>
               <Icon name="pin" size={14} /><span className="grow ellipsis"><b>{p.name}</b><span className="muted"> · {p.detail}</span></span>{p.ele != null && <span className="muted small">{p.ele} m</span>}
             </button>))}</div>}
-          <div className="row tight wrap">
+          <div className="planner-mode">
             <Select ariaLabel="Activity" value={activity} onChange={v => setActivity(v as Activity)} options={ACTIVITIES.map(a => ({ value: a, label: ACTIVITY[a].label }))} />
             <Segmented size="sm" value={mode} onChange={v => setMode(v as 'straight' | 'paths')} label="How the way goes"
               options={[{ value: 'paths', label: 'Along paths', disabled: !online, title: online ? 'The way follows trails and roads (BRouter)' : 'Needs looking things up online (Settings → General)' }, { value: 'straight', label: 'Straight lines' }]} />
           </div>
-          <div className="row tight wrap planner-tools">
+          <div className="planner-tools">
             <button type="button" className="btn sm" onClick={undo} disabled={!history.length}><Icon name="undo" size={14} />Undo</button>
             <button type="button" className="btn sm" onClick={loopBack} disabled={controls.length < 2} title="Back to where you started"><Icon name="repeat" size={14} />Back to start</button>
             <button type="button" className="btn sm" onClick={reverse} disabled={controls.length < 2}><Icon name="arrow-up" size={14} />Reverse</button>
@@ -126,7 +126,7 @@ export default function Planner() {
           <p className="muted tiny m0">Tap to add a point · drag a point to move it · tap a point to remove it.</p>
           {err && <p className="warn-text small m0">{err}</p>}
           {res && <>
-            <div className="stats-row tight">
+            <div className="planner-stats">
               <div className="stat"><span className="stat-l">Distance</span><span className="stat-v">{fmtDist(res.distance_m, u)}</span></div>
               <div className="stat"><span className="stat-l">Up</span><span className="stat-v">{fmtHeight(res.gain_m, u)}</span></div>
               <div className="stat"><span className="stat-l">Time</span><span className="stat-v">{fmtMinutes(res.minutes)}</span><span className="stat-s tiny">{LEVEL[res.level]?.label.toLowerCase()}</span></div>
@@ -134,7 +134,7 @@ export default function Planner() {
             {res.heights_note && <p className="muted tiny m0">{res.heights_note}</p>}
             {res.track.some(p => p[2] != null) && <Elevation track={res.track} onHover={setHover} compact />}
           </>}
-          <div className="row tight">
+          <div className="planner-save">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Name the route" aria-label="Name" />
             <button type="button" className="btn primary" onClick={save} disabled={saving || !res || busy}>{saving ? <Spinner /> : <Icon name="check" size={15} />}Save</button>
           </div>
