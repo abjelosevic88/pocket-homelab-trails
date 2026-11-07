@@ -567,7 +567,8 @@ li.list-row.clickable:hover { background: var(--hover); }
 .segmented.self-start { align-self: flex-start; width: auto; }
 
 /* the first visit: four ways to start */
-.welcome-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; max-width: 880px; }
+.welcome-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 760px; }
+@media (max-width: 640px) { .welcome-steps { grid-template-columns: 1fr; } }
 .welcome-steps .tile { display: flex; flex-direction: column; gap: 8px; width: 100%; height: 100%; padding: 14px 16px; text-align: left; }
 .welcome-steps .tile .tile-head { font-size: 14px; font-weight: 600; color: var(--text); }
 .welcome-steps .tile p { line-height: 1.45; }
