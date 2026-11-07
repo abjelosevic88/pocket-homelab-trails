@@ -1,0 +1,4 @@
+# Pocket Trails behind Caddy.
+trails.example.com {
+	reverse_proxy pocket-trails:8080
+}
