@@ -1,29 +1,36 @@
 // The height along a route as a profile. Moving over it says the distance,
 // the height and how steep it is there, and a dot follows on the map; the
 // spots along the way sit on the line.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useApp } from '../lib/app-context'
 import { WAYPOINT, cumulative, distUnit, fmtDist, fmtHeight, heightUnit } from '../lib/trails'
 import type { Pt, Waypoint } from '../lib/types'
 import { iconSVG } from './icons'
 
-const H = 150, PL = 44, PR = 10, PT = 12, PB = 24
+const PL = 44, PR = 10, PT = 12, PB = 24
 
 export function Elevation({ track, waypoints, onHover, compact = false }: { track: Pt[]; waypoints?: Waypoint[]; onHover?: (atM: number | null) => void; compact?: boolean }) {
   const { settings } = useApp()
   const units = settings?.units || 'metric'
-  const box = useRef<SVGSVGElement>(null)
-  const wrap = useRef<HTMLDivElement>(null)
+  const box = useRef<SVGSVGElement | null>(null)
   const [at, setAt] = useState<number | null>(null)
-  // drawn at its real width, so the labels are never stretched
-  const [W, setW] = useState(800)
-  useEffect(() => {
-    const el = wrap.current
+  // drawn at its real size (the CSS sets the height per page), so labels and dots are never stretched
+  const [size, setSize] = useState({ w: 800, h: 150 })
+  const ro = useRef<ResizeObserver | null>(null)
+  const measured = useCallback((el: SVGSVGElement | null) => {
+    box.current = el
+    ro.current?.disconnect()
+    ro.current = null
     if (!el) return
-    const ro = new ResizeObserver(() => { const w = Math.round(el.clientWidth); if (w > 100) setW(w) })
-    ro.observe(el)
-    return () => ro.disconnect()
+    const measure = () => {
+      const r = el.getBoundingClientRect(), w = Math.round(r.width), h = Math.round(r.height)
+      if (w > 0 && h > 0) setSize(s => s.w === w && s.h === h ? s : { w, h })
+    }
+    measure()
+    ro.current = new ResizeObserver(measure)
+    ro.current.observe(el)
   }, [])
+  const W = size.w, H = size.h
   const data = useMemo(() => {
     const cum = cumulative(track)
     const pts: { d: number; e: number }[] = []
@@ -43,7 +50,7 @@ export function Elevation({ track, waypoints, onHover, compact = false }: { trac
     hi = Math.ceil((hi + span * 0.12) / 10) * 10
     return { sm, total, lo, hi, cum }
   }, [track])
-  if (!data) return <div ref={wrap} className="elev-none muted small">No heights for this route{settings?.online === false ? ' (looking them up online is switched off in Settings)' : ''}.</div>
+  if (!data) return <div className="elev-none muted small">No heights for this route{settings?.online === false ? ' (looking them up online is switched off in Settings)' : ''}.</div>
   const { sm, total, lo, hi } = data
   const x = (d: number) => PL + (d / total) * (W - PL - PR)
   const y = (e: number) => PT + (1 - (e - lo) / (hi - lo)) * (H - PT - PB)
@@ -72,8 +79,8 @@ export function Elevation({ track, waypoints, onHover, compact = false }: { trac
   const leave = () => { setAt(null); onHover?.(null) }
   const cur = at != null ? near(at) : null
   return (
-    <div ref={wrap} className={`elev ${compact ? 'compact' : ''}`}>
-      <svg ref={box} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="elev-svg" role="img" aria-label="Height along the route"
+    <div className={`elev ${compact ? 'compact' : ''}`}>
+      <svg ref={measured} viewBox={`0 0 ${W} ${H}`} className="elev-svg" role="img" aria-label="Height along the route"
         onMouseMove={e => move(e.clientX)} onMouseLeave={leave} onTouchStart={e => move(e.touches[0].clientX)} onTouchMove={e => move(e.touches[0].clientX)} onTouchEnd={leave}>
         {yTicks.map(v => <g key={v}><line x1={PL} x2={W - PR} y1={y(v)} y2={y(v)} className="elev-grid" /><text x={PL - 6} y={y(v) + 4} className="elev-lbl" textAnchor="end">{fmtHeight(v, units).replace(/ (m|ft)$/, '')}</text></g>)}
         {xTicks.map(v => <text key={v} x={x(v)} y={H - 6} className="elev-lbl" textAnchor="middle">{fmtDist(v, units).replace(/ (km|mi|m)$/, '')}</text>)}
