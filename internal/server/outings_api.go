@@ -139,7 +139,7 @@ func (s *Server) handleListOutings(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := actorID(ctx)
 	q := r.URL.Query()
-	f := store.OutingFilter{From: q.Get("from"), To: q.Get("to"), RouteID: int64(queryInt(r, "route_id")), Q: q.Get("q"), Limit: queryInt(r, "limit"), Desc: q.Get("order") == "desc"}
+	f := store.OutingFilter{From: q.Get("from"), To: q.Get("to"), RouteID: int64(queryInt(r, "route_id")), TripRef: q.Get("trip_ref"), Q: q.Get("q"), Limit: queryInt(r, "limit"), Desc: q.Get("order") == "desc"}
 	if v := q.Get("status"); v != "" {
 		f.Status = strings.Split(v, ",")
 	}

@@ -257,6 +257,8 @@ type Outing struct {
 
 	// Filled for lists and pages.
 	RouteName   string        `json:"route_name,omitempty"`
+	StartLat    *float64      `json:"start_lat,omitempty"` // where the route starts (Pocket Weather's plans)
+	StartLng    *float64      `json:"start_lng,omitempty"`
 	DistanceM   float64       `json:"distance_m"` // the route's (or what you did)
 	GainM       float64       `json:"gain_m"`
 	Minutes     int           `json:"minutes"` // the route's time

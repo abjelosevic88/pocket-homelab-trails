@@ -11,7 +11,7 @@ const outingCols = `o.id, o.user_id, o.route_id, o.title, o.activity, o.date, o.
   o.back_by, o.safety, o.contact_name, o.contact_email, o.contact_ref, o.alert_after, o.plan_sent_at, o.warned_at, o.alerted_at, o.alert_error,
   o.started_at, o.ended_at, o.weather, o.trip_ref, o.trip_name, o.cal_ref, o.rating, o.conditions, o.report, %s, o.actual, o.actual_source,
   o.health_ref, o.note_ref, o.source, o.source_ref, o.created_at, o.updated_at,
-  COALESCE(r.name, ''), COALESCE(r.distance_m, 0), COALESCE(r.gain_m, 0), COALESCE(r.loss_m, 0), COALESCE(r.minutes_set, 0), COALESCE(r.activity, ''),
+  COALESCE(r.name, ''), COALESCE(r.distance_m, 0), COALESCE(r.gain_m, 0), COALESCE(r.loss_m, 0), COALESCE(r.minutes_set, 0), COALESCE(r.activity, ''), r.start_lat, r.start_lng,
   (SELECT COUNT(1) FROM outing_items i WHERE i.outing_id = o.id), (SELECT COUNT(1) FROM outing_items i WHERE i.outing_id = o.id AND i.packed = 1)`
 
 func outingSelect(full bool) string {
@@ -35,17 +35,19 @@ func scanOuting(sc interface{ Scan(...any) error }) (*Outing, RouteFacts, error)
 	var route sql.NullInt64
 	var people, weather, track, actual string
 	var safety int
+	var sLat, sLng sql.NullFloat64
 	if err := sc.Scan(&o.ID, &o.UserID, &route, &o.Title, &o.Activity, &o.Date, &o.StartTime, &o.Status, &people, &o.Notes,
 		&o.BackBy, &safety, &o.ContactName, &o.ContactEmail, &o.ContactRef, &o.AlertAfter, &o.PlanSentAt, &o.WarnedAt, &o.AlertedAt, &o.AlertError,
 		&o.StartedAt, &o.EndedAt, &weather, &o.TripRef, &o.TripName, &o.CalRef, &o.Rating, &o.Conditions, &o.Report, &track, &actual, &o.ActualSource,
 		&o.HealthRef, &o.NoteRef, &o.Source, &o.SourceRef, &o.CreatedAt, &o.UpdatedAt,
-		&o.RouteName, &o.DistanceM, &o.GainM, &rf.LossM, &rf.MinutesSet, &rf.Activity, &o.ItemCount, &o.PackedCount); err != nil {
+		&o.RouteName, &o.DistanceM, &o.GainM, &rf.LossM, &rf.MinutesSet, &rf.Activity, &sLat, &sLng, &o.ItemCount, &o.PackedCount); err != nil {
 		return nil, rf, notFound(err)
 	}
 	if route.Valid {
 		id := route.Int64
 		o.RouteID = &id
 	}
+	o.StartLat, o.StartLng = nf(sLat), nf(sLng)
 	o.Safety = safety == 1
 	_ = json.Unmarshal([]byte(people), &o.People)
 	if o.People == nil {
@@ -66,6 +68,7 @@ type OutingFilter struct {
 	From, To string // dates, inclusive
 	Status   []string
 	RouteID  int64
+	TripRef  string
 	Q        string
 	Limit    int
 	Desc     bool
@@ -92,6 +95,10 @@ func (s *Store) ListOutings(ctx context.Context, uid int64, f OutingFilter) ([]*
 	if f.RouteID > 0 {
 		q += ` AND o.route_id = ?`
 		args = append(args, f.RouteID)
+	}
+	if f.TripRef != "" {
+		q += ` AND o.trip_ref = ?`
+		args = append(args, f.TripRef)
 	}
 	if t := strings.TrimSpace(f.Q); t != "" {
 		like := "%" + t + "%"

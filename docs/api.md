@@ -23,7 +23,7 @@ Everything the web app does goes through `/api/v1`, with a session cookie or `Au
 ## Outings
 | | |
 |---|---|
-| `GET /outings` (`?status=planned,out&from=&to=&route_id=&q=&order=desc&limit=`) | outings with their route's numbers and packing counts |
+| `GET /outings` (`?status=planned,out&from=&to=&route_id=&trip_ref=&q=&order=desc&limit=`) | outings with their route's numbers, its start (`start_lat`, `start_lng`) and packing counts |
 | `GET /outings/{id}` | `{outing, route, advice, sunrise, sunset, finish, weather_note, links, suggest_back_by}` — the forecast is fetched when older than an hour |
 | `POST /outings` | `{route_id?, date, start_time?, title?, activity?, people?, notes?, back_by?: "YYYY-MM-DDTHH:MM", safety?, contact_name?, contact_email?, alert_after?, trip_ref?, pack_id?, source_ref?}` |
 | `PUT /outings/{id}` · `DELETE /outings/{id}` | change (rating, conditions, report too) · delete |
