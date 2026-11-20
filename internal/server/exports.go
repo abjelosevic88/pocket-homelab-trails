@@ -162,6 +162,13 @@ func (s *Server) importPocket(ctx context.Context, uid int64, doc exportDoc) (ma
 		}
 		if have, err := s.store.RouteBySource(ctx, uid, src, ref); err == nil {
 			routeIDs[r.ID] = have.ID
+			added["already"]++
+			continue
+		}
+		if have, err := s.store.GetRoute(ctx, uid, r.ID); err == nil && have.CreatedAt == r.CreatedAt {
+			// the person's own route: their file back on the same box
+			routeIDs[r.ID] = have.ID
+			added["already"]++
 			continue
 		}
 		old := r.ID
@@ -229,6 +236,11 @@ func (s *Server) importPocket(ctx context.Context, uid int64, doc exportDoc) (ma
 			src, ref = "import", fmt.Sprintf("outing:%d:%s", o.ID, o.CreatedAt)
 		}
 		if _, err := s.store.OutingBySource(ctx, uid, src, ref); err == nil {
+			added["already"]++
+			continue
+		}
+		if have, _, err := s.store.GetOuting(ctx, uid, o.ID); err == nil && have.CreatedAt == o.CreatedAt {
+			added["already"]++
 			continue
 		}
 		o.Source, o.SourceRef = src, ref
@@ -265,5 +277,10 @@ func (s *Server) importPocket(ctx context.Context, uid int64, doc exportDoc) (ma
 			_ = s.store.AddOutingItem(ctx, uid, it)
 		}
 	}
-	return map[string]any{"added": added}, nil
+	// the counts at the top level too (Pocket Move shows those)
+	out := map[string]any{"added": added}
+	for k, v := range added {
+		out[k] = v
+	}
+	return out, nil
 }

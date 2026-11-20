@@ -40,7 +40,7 @@ Everything the web app does goes through `/api/v1`, with a session cookie or `Au
 |---|---|
 | `GET /gear` · `POST /gear` · `PUT /gear/{id}` · `DELETE /gear/{id}` | `{name, category, weight_g, worn, consumable, note}` |
 | `GET /packs` · `POST /packs` · `PUT /packs/{id}` · `DELETE /packs/{id}` | packing lists `{name, activity, items: [{gear_id, qty}]}` with their weights |
-| `POST /gear/import` | a LighterPack CSV (or any CSV with Name, Weight, Unit, Category) → gear and a packing list |
+| `POST /gear/import` | a LighterPack CSV (or any CSV with Name, Weight, Unit, Category) → gear and a packing list (a list of that name already here is left as it is) |
 | `POST /gear/from-inventory` | `{items: [{id, name}]}` from Pocket Inventory |
 
 ## Overviews
@@ -56,4 +56,4 @@ Everything the web app does goes through `/api/v1`, with a session cookie or `Au
 Another app acting for you with a `pcx_` token reaches only: `trails:read` — `GET summary, today, stats, routes, routes/{id}, routes/{id}/gpx, outings, outings/{id}, gear, packs, search, day/{date}`; `trails:write` — `POST /outings`, `POST /routes`, `PUT`/`DELETE` of the outings and routes it added itself. It never arms “tell someone”.
 
 ## Everything else
-`/auth/*`, `/settings`, `/tokens`, `/users`, `/apps`, `/export.json`, `/export.csv`, `/import` (a Pocket Trails export), `/backup` (admins), `/ai` (`{want: pack|report|describe, outing_id|route_id}`), `/healthz`, `/metrics`.
+`/auth/*`, `/settings`, `/tokens`, `/users`, `/apps`, `/export.json`, `/export.csv`, `/import` (a Pocket Trails export; what is already here, or your own on this box, is skipped), `/pocket/portable` (what Pocket Move can copy out and bring in, for `move:export` / `move:import` links), `/backup` (admins), `/ai` (`{want: pack|report|describe, outing_id|route_id}`), `/healthz`, `/metrics`.

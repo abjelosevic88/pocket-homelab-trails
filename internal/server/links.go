@@ -21,6 +21,22 @@ var linkOffers = []core.Offer{
 	{Scope: "trails:write", Name: "Plan outings and add routes", Description: "Plan an outing on one of your routes or add a route from a track (\"we hike Trebević on Saturday\", a ride you recorded). It may change or remove only the outings and routes it added itself."},
 }
 
+// portable is what Pocket Move may copy out and bring in for a person
+// (docs/move.md in pocket-homelab-core); Register adds move:export/import.
+var portable = &core.Portable{
+	Exports: []core.PortableExport{
+		{Path: "/api/v1/export.json", File: "trails.json", Kind: core.KindPocket, Title: "Every route with its track and waypoints, your outings with what you walked, your gear and packing lists"},
+		{Path: "/api/v1/export.csv", File: "outings.csv", Kind: core.KindCSV, Title: "Every outing as a table"},
+	},
+	Imports: []core.PortableImport{
+		{Path: "/api/v1/import", Kind: core.KindPocket, Form: "file", Title: "Adds the routes, outings, gear and packing lists from another box; what is already here is skipped"},
+		{Path: "/api/v1/routes/import", Kind: core.KindGPX, Form: "file", Title: "Adds each track or route in a GPX file as a route, with its waypoints; the same file twice adds nothing"},
+		{Path: "/api/v1/routes/import", Kind: "kml", Form: "file", Title: "Adds each line in a KML file (Google My Maps, Google Earth) as a route; the same file twice adds nothing"},
+		{Path: "/api/v1/routes/import", Kind: "tcx", Form: "file", Title: "Adds a Garmin TCX course or activity as a route; the same file twice adds nothing"},
+		{Path: "/api/v1/gear/import", Kind: "lighterpack-csv", Form: "file", Title: "Adds the gear in a LighterPack (or any Name, Weight) CSV and makes a packing list named after the file; gear and lists already here are kept"},
+	},
+}
+
 type linkRoute struct {
 	methods string
 	path    *regexp.Regexp
@@ -40,6 +56,9 @@ var errLinkScope = errors.New("outside the link's scope")
 
 // linkAllows reports whether a link token with these scopes may make this request.
 func linkAllows(scopes []string, r *http.Request) bool {
+	if portable.LinkAllows(scopes, r) {
+		return true
+	}
 	for _, lr := range linkRoutes {
 		if !strings.Contains(" "+lr.methods+" ", " "+r.Method+" ") || !lr.path.MatchString(r.URL.Path) {
 			continue

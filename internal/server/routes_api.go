@@ -401,6 +401,7 @@ func (s *Server) handleImportRoutes(w http.ResponseWriter, r *http.Request) {
 	}
 	made := []*store.Route{}
 	var problems []string
+	already := 0
 	for _, f := range files {
 		parsed, err := geo.ParseFile(f.name, f.data)
 		if err != nil {
@@ -413,6 +414,7 @@ func (s *Server) handleImportRoutes(w http.ResponseWriter, r *http.Request) {
 				decorateRoute(have, st.PacePct)
 				have.Track = nil
 				made = append(made, have)
+				already++
 				continue
 			}
 			rt := &store.Route{Name: p.Name, Description: p.Desc, Activity: firstNonEmpty(activity, p.Activity, st.DefaultActivity, "hike"), Track: p.Track,
@@ -448,7 +450,7 @@ func (s *Server) handleImportRoutes(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, strings.Join(problems, "; "))
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"routes": made, "problems": problems})
+	writeJSON(w, http.StatusOK, map[string]any{"routes": made, "problems": problems, "created": len(made) - already, "already": already})
 }
 
 func readPart(fh *multipart.FileHeader, max int64) ([]byte, error) {

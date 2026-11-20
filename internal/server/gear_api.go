@@ -343,6 +343,13 @@ func (s *Server) importGearCSV(r *http.Request, uid int64, listName string, data
 	if len(items) == 0 {
 		return nil, &userErr{"no gear found in the file"}
 	}
+	packs, _ := s.store.ListPacks(ctx, uid)
+	for _, have := range packs {
+		if strings.EqualFold(strings.TrimSpace(have.Name), strings.TrimSpace(clip(listName, 200))) {
+			// a list of that name is here already (the same file again): left as it is
+			return map[string]any{"added": added, "found": found, "pack_id": have.ID, "already": 1}, nil
+		}
+	}
 	p := &store.Pack{Name: clip(listName, 200)}
 	if err := s.store.CreatePack(ctx, uid, p); err != nil {
 		return nil, err
