@@ -14,7 +14,7 @@ import (
 // Pocket Core app links (docs/links.md in pocket-homelab-core), Trails as
 // the target: another Pocket app the person allowed in Core may act here for
 // them with a pcx_ token, only within these scopes. Every route not listed
-// in linkRoutes stays closed to it (403).
+// in linkRoutes, portable or capabilities stays closed to it (403).
 
 var linkOffers = []core.Offer{
 	{Scope: "trails:read", Name: "See your routes and outings", Description: "Read your routes (distance, climb, time, the spots along them, the GPX), your gear and packing lists, your planned and finished outings with their weather, who comes and how it went, and your year's totals — for your journal, your calendar's weather, a trip's page, search and Pocket AI."},
@@ -37,6 +37,19 @@ var portable = &core.Portable{
 	},
 }
 
+// capabilities are what Pocket Search, Pocket Day and Pocket Hub may ask
+// Trails (docs/capabilities.md in pocket-homelab-core); Register adds the
+// pocket:* offers. The routes are in capabilities.go. There is no quick
+// capture: an outing needs a day and usually a route, so it is planned in
+// Trails (or by an app with trails:write).
+var capabilities = core.Capabilities{
+	Search: &core.Searchable{What: "Your routes and outings, the spots along your routes and your gear",
+		Kinds: []string{"route", "outing", "spot", "gear"}, Bangs: []string{"trails", "hike", "route"}},
+	Day: &core.DayFeed{Label: "Trails", One: "outing", Many: "outings", Unit: "count",
+		What: "The outings you planned or did that day, with how far and how long"},
+	Widget: &core.Widget{Title: "Next outing", What: "Your next outing with its day, start time and weather, or the one you are out on with its back-by time, then your latest outings"},
+}
+
 type linkRoute struct {
 	methods string
 	path    *regexp.Regexp
@@ -56,7 +69,7 @@ var errLinkScope = errors.New("outside the link's scope")
 
 // linkAllows reports whether a link token with these scopes may make this request.
 func linkAllows(scopes []string, r *http.Request) bool {
-	if portable.LinkAllows(scopes, r) {
+	if portable.LinkAllows(scopes, r) || capabilities.LinkAllows(scopes, r) {
 		return true
 	}
 	for _, lr := range linkRoutes {

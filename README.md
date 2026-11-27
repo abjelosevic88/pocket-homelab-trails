@@ -85,6 +85,8 @@ Set `CORE_URL` and `CORE_REGISTRATION_KEY` and Trails joins the box: people sign
 
 Other apps use your trails through `trails:read` and `trails:write`: Pocket Day writes your outings into your journal, Pocket Weather adds them to its plans, Pocket Travel shows them on a trip, Pocket Search finds routes and outings, Pocket AI says what is next and plans an outing when you ask — another app can never arm “tell someone”. Events on the bus — `trails.outing_planned`, `trails.outing_today`, `trails.outing_started`, `trails.outing_done`, `trails.outing_cancelled`, `trails.overdue`, `trails.route_saved` — start flows in Pocket Flows. Without Core every connection can be made directly with a URL and a token; the Core-only choices stay visible, greyed out.
 
+Pocket Search and Pocket Hub find Trails on their own, with nothing to set up in either: your routes, outings, the spots along your routes and your gear turn up in Search (`!trails lukomir`, `!hike`, `!route`), and Hub shows a "Next outing" widget with the day, the start time and the weather Trails already keeps for it, or the outing you are out on with its back-by time, then your latest outings. The day's outings are offered the same way (Pocket Day keeps its own, fuller reading through `trails:read` for now). There is no quick line from Hub: an outing needs a day and usually a route. None of this can set off, finish or call off an outing. The routes are in [docs/api.md](docs/api.md#pocket-search-pocket-day-and-pocket-hub).
+
 The free services (OpenStreetMap's Nominatim, Open-Meteo, BRouter, the map tiles) need no account; looking things up online can be switched off per person.
 
 ## Develop

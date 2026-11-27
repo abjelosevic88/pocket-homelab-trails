@@ -251,6 +251,24 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"year": t, "previous": prev, "years": years})
 }
 
+// dayOutings are the outings on one day with their numbers, earliest first;
+// the ones called off are left out.
+func (s *Server) dayOutings(ctx context.Context, uid int64, d string, pace int) ([]*store.Outing, error) {
+	outs, facts, err := s.store.ListOutings(ctx, uid, store.OutingFilter{From: d, To: d})
+	if err != nil {
+		return nil, err
+	}
+	day := []*store.Outing{}
+	for i, o := range outs {
+		if o.Status == store.OutingCancelled {
+			continue
+		}
+		decorateOuting(o, facts[i], pace)
+		day = append(day, o)
+	}
+	return day, nil
+}
+
 // handleDay is one day for Pocket Day's journal: outings planned and done.
 func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -261,17 +279,13 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st := s.settingsOf(ctx, uid)
-	outs, facts, err := s.store.ListOutings(ctx, uid, store.OutingFilter{From: d, To: d})
+	outs, err := s.dayOutings(ctx, uid, d, st.PacePct)
 	if err != nil {
 		s.fail(w, err, "day")
 		return
 	}
 	items := []map[string]any{}
-	for i, o := range outs {
-		if o.Status == store.OutingCancelled {
-			continue
-		}
-		decorateOuting(o, facts[i], st.PacePct)
+	for _, o := range outs {
 		dist, gain, mins := walked(o)
 		line := fmt.Sprintf("%s · %s up", fmtDist(dist, st.Units), fmtHeight(gain, st.Units))
 		if mins > 0 {
@@ -287,6 +301,52 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"date": d, "outings": items, "count": len(items)})
 }
 
+// found is what a search matched: routes and outings with their numbers,
+// gear, and the spots along routes.
+type found struct {
+	routes  []*store.Route
+	outings []*store.Outing
+	gear    []*store.Gear
+	spots   []*store.Waypoint
+}
+
+// find looks the words up in a person's routes, outings (the newest 30),
+// gear and spots (the first 10). What could be read is returned even when
+// one of the lists failed; the error is the first one met.
+func (s *Server) find(ctx context.Context, uid int64, q string, pace int) (found, error) {
+	var f found
+	var first error
+	keep := func(err error) {
+		if err != nil && first == nil {
+			first = err
+		}
+	}
+	var err error
+	f.routes, err = s.store.ListRoutes(ctx, uid, store.RouteFilter{Q: q})
+	keep(err)
+	for _, rt := range f.routes {
+		decorateRoute(rt, pace)
+	}
+	outs, facts, err := s.store.ListOutings(ctx, uid, store.OutingFilter{Q: q, Desc: true, Limit: 30})
+	keep(err)
+	for i, o := range outs {
+		decorateOuting(o, facts[i], pace)
+	}
+	f.outings = outs
+	f.gear, err = s.store.ListGear(ctx, uid, false, q)
+	keep(err)
+	wps, err := s.store.AllWaypoints(ctx, uid)
+	keep(err)
+	lq := strings.ToLower(q)
+	for _, wp := range wps {
+		if len(f.spots) >= 10 || !strings.Contains(strings.ToLower(wp.Name+" "+wp.Note), lq) {
+			continue
+		}
+		f.spots = append(f.spots, wp)
+	}
+	return f, first
+}
+
 // handleSearch finds routes, outings, gear and spots (for Pocket Search too).
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -298,30 +358,19 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st := s.settingsOf(ctx, uid)
-	routes, _ := s.store.ListRoutes(ctx, uid, store.RouteFilter{Q: q})
-	for _, rt := range routes {
-		decorateRoute(rt, st.PacePct)
+	f, _ := s.find(ctx, uid, q, st.PacePct)
+	for _, rt := range f.routes {
 		res = append(res, map[string]any{"type": "route", "id": rt.ID, "title": rt.Name, "subtitle": fmt.Sprintf("%s · %s · %s up · %s", activityWords[rt.Activity], fmtDist(rt.DistanceM, st.Units), fmtHeight(rt.GainM, st.Units), fmtMinutes(rt.Minutes)),
 			"path": fmt.Sprintf("/routes/%d", rt.ID), "url": s.link(fmt.Sprintf("/routes/%d", rt.ID))})
 	}
-	outs, facts, _ := s.store.ListOutings(ctx, uid, store.OutingFilter{Q: q, Desc: true, Limit: 30})
-	for i, o := range outs {
-		decorateOuting(o, facts[i], st.PacePct)
+	for _, o := range f.outings {
 		res = append(res, map[string]any{"type": "outing", "id": o.ID, "title": outingTitle(o), "subtitle": niceDate(o.Date) + " · " + statusWords[o.Status],
 			"date": o.Date, "path": fmt.Sprintf("/outings/%d", o.ID), "url": s.link(fmt.Sprintf("/outings/%d", o.ID))})
 	}
-	gear, _ := s.store.ListGear(ctx, uid, false, q)
-	for _, g := range gear {
+	for _, g := range f.gear {
 		res = append(res, map[string]any{"type": "gear", "id": g.ID, "title": g.Name, "subtitle": fmt.Sprintf("Gear · %d g", g.WeightG), "path": "/gear", "url": s.link("/gear")})
 	}
-	wps, _ := s.store.AllWaypoints(ctx, uid)
-	lq := strings.ToLower(q)
-	n := 0
-	for _, wp := range wps {
-		if n >= 10 || !strings.Contains(strings.ToLower(wp.Name+" "+wp.Note), lq) {
-			continue
-		}
-		n++
+	for _, wp := range f.spots {
 		res = append(res, map[string]any{"type": "spot", "id": wp.ID, "title": firstNonEmpty(wp.Name, kindWords[wp.Kind]), "subtitle": kindWords[wp.Kind] + " on a route",
 			"path": fmt.Sprintf("/routes/%d", wp.RouteID), "url": s.link(fmt.Sprintf("/routes/%d", wp.RouteID))})
 	}

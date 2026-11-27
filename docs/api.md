@@ -53,7 +53,17 @@ Everything the web app does goes through `/api/v1`, with a session cookie or `Au
 
 ## Pocket Core links
 
-Another app acting for you with a `pcx_` token reaches only: `trails:read` — `GET summary, today, stats, routes, routes/{id}, routes/{id}/gpx, outings, outings/{id}, gear, packs, search, day/{date}`; `trails:write` — `POST /outings`, `POST /routes`, `PUT`/`DELETE` of the outings and routes it added itself. It never arms “tell someone”.
+Another app acting for you with a `pcx_` token reaches only: `trails:read` — `GET summary, today, stats, routes, routes/{id}, routes/{id}/gpx, outings, outings/{id}, gear, packs, search, day/{date}`; `trails:write` — `POST /outings`, `POST /routes`, `PUT`/`DELETE` of the outings and routes it added itself. It never arms “tell someone”. The `pocket:search`, `pocket:day` and `pocket:widget` scopes each reach their one route below.
+
+## Pocket Search, Pocket Day and Pocket Hub
+
+Trails answers three of the routes every Pocket app can offer (`docs/capabilities.md` in Pocket Core), so Pocket Search, Pocket Day and Pocket Hub find it on their own. Each has its own link scope that opens that one route and nothing else; a signed-in person or a personal token can call them too. They only read: no outing changes its status, no forecast is fetched and no track is sent. Addresses (`url`) are paths in the app. There is no `POST /pocket/capture`: an outing needs a day and usually a route.
+
+| Route | Scope | What |
+|---|---|---|
+| `GET /pocket/search?q&limit` | `pocket:search` | `{items}`: routes, outings, spots and gear matching `q`; what has the words in its name first, and a route, an outing, a piece of gear and a spot in turn. Each has `id` (`route:4`, `outing:9`, `spot:3`, `gear:7`), `title`, `kind` (route, outing, spot, gear), `snippet` (a route: "Hike · 5.4 km · 468 m up · 2 h 30 · Trebević"; an outing: "Done · 5.6 km · 480 m up · 2 h 42 · with Amar"; a spot: "Water on Trebević loop · after 2.3 km"; gear: "Clothing · 310 g"; in your units), `date` (an outing's day) and `url` (`/routes/4`, `/outings/9`, a spot opens its route, gear opens `/gear`). Words without a letter or a digit find nothing |
+| `GET /pocket/day/{date}` | `pocket:day` | `{date, summary, items, metrics}`: the outings of that day, the ones called off left out. `summary` is "Hiked Trebević loop, 5.6 km in 2 h 42", "Hike: Trebević loop, out now" or "Hike: Trebević loop planned for 08:00". An item has `id`, `title`, `kind` (planned, out now, done), `done`, `time` and `end` (when you set off and came back, else the planned start), `minutes`, `qty` (kilometres, one decimal), `sub` (the route when the title does not say it, who came), `note` (how it went, else your notes) and `url`. `metrics` add up what was done: Distance, Climb, Time |
+| `GET /pocket/widget` | `pocket:widget` | `{line, items}`: the outing you are out on ("Out now · back by 17:30"), your next three planned ones ("Saturday 08:00 · 5.4 km · 468 m up · 2 h 30 · Partly cloudy, 4° – 12°, 40% chance of rain", the weather only when a forecast for that day is already kept on the outing), then the three latest done. `line` is "Trebević loop on Saturday 08:00", "Out now: Trebević loop, back by 17:30" or empty |
 
 ## Everything else
 `/auth/*`, `/settings`, `/tokens`, `/users`, `/apps`, `/export.json`, `/export.csv`, `/import` (a Pocket Trails export; what is already here, or your own on this box, is skipped), `/pocket/portable` (what Pocket Move can copy out and bring in, for `move:export` / `move:import` links), `/backup` (admins), `/ai` (`{want: pack|report|describe, outing_id|route_id}`), `/healthz`, `/metrics`.

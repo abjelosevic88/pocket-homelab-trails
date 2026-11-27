@@ -218,12 +218,14 @@ func (s *Server) registerWithCore(ctx context.Context) error {
 	m := core.Manifest{
 		Slug: "trails", Name: "Pocket Trails",
 		Description: "Plan hikes, walks, runs and bike rides: routes on a map (drawn or from a GPX) with the climb, the time they take and the water, huts and summits along the way, what to pack with its weight, the weather and sunset on the day, a time to be back by that tells someone if you are not, and how it went against what you planned. It takes the weather from Pocket Weather, puts outings in Pocket Calendar, picks companions from Pocket Contacts, compares your walked track from Pocket Movement, logs workouts in Pocket Health, emails your plan through Pocket Mail, brings gear from Pocket Inventory, shows Pocket Places along the way, files outings under Pocket Travel trips, saves reports in Pocket Notes and gear to buy in Pocket Tasks. Works on its own too; Pocket AI suggests what to pack and drafts the report.",
-		Icon:        "/favicon.svg", Version: Version,
+		Icon:        "/favicon.svg", Category: "Places", Version: Version,
 		URL: s.cfg.CoreAppURL, PublicURL: s.cfg.BaseURL, HealthPath: "/healthz", EnvPrefix: "TRAILS",
 		Publishes: eventTopics,
 		Offers:    linkOffers,
 		Portable:  portable,
 		Uses:      append(linkUses(), core.InferenceUse()),
+
+		Capabilities: capabilities,
 	}
 	if s.cfg.BaseURL != "" {
 		m.OIDC = &core.OIDCRequest{RedirectURIs: []string{s.oidcCallbackURL()}}
